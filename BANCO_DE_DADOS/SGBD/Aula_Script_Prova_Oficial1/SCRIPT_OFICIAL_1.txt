@@ -1,0 +1,46 @@
+-- PROVA OFICIAL 1
+
+create database Prova_Oficial;
+
+use prova_oficial;
+
+create table alunos(
+codigo int auto_increment primary key,
+nome varchar(100),
+datahora datetime
+);
+
+select * from alunos;
+alter table alunos change column tadahora datahora varchar(100);
+
+insert into alunos(nome, datahora) values('Ana Gonçalves', now()),
+('João Silva', now()), ('Pedro Pereira', now());
+
+desc alunos;
+
+-- 12. Implementando savepoint!
+start transaction;
+savepoint SP0;
+delete from alunos where codigo = 3;
+select * from alunos;
+rollback to savepoint SP0;
+update alunos set nome = 'Pedro Salvez' where codigo = 3;
+commit;
+-- apagar!
+release savepoint SP0;
+
+-- 11. implementando exemplos de setenças em SQL!
+-- DQL
+select * from alunos;
+-- DTL
+start transaction;
+savepoint SP0;
+delete from alunos where codigo = 3;
+select * from alunos;
+rollback to savepoint SP0;
+-- DDL
+create table alunos;
+-- DCL 
+grant select on prova_oficial.alunos to 'root'@'LOCAL_HOST';
+-- DML
+delete from alunos where codigo = 3;

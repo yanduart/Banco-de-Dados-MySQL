@@ -1,0 +1,132 @@
+-- criando o BKP
+CREATE DATABASE IF NOT EXISTS BKP;
+USE BKP;
+
+DELIMITER //
+
+CREATE PROCEDURE backup_aula9()
+BEGIN
+   -- Desativa restrições de chave estrangeira temporariamente
+    SET foreign_key_checks = 0;
+
+    -- Exemplo com duas tabelas relacionadas
+    -- Primeiro, a tabela "pai"
+    DROP TABLE IF EXISTS BKP.departamento;
+    CREATE TABLE BKP.departamento LIKE aula9.departamento;
+    INSERT INTO BKP.departamento SELECT * FROM aula9.departamento;
+
+    -- Depois, a tabela "filho"
+    DROP TABLE IF EXISTS BKP.funcionario;
+    CREATE TABLE BKP.funcionario LIKE aula9.funcionario;
+    INSERT INTO BKP.funcionario SELECT * FROM aula9.funcionario;
+    
+    DROP TABLE IF EXISTS BKP.taxas_moeda;
+    CREATE TABLE BKP.taxas_moeda LIKE aula9.taxas_moeda;
+    INSERT INTO BKP.taxas_moeda SELECT * FROM aula9.taxas_moeda;
+
+    -- Reativa as verificações de integridade
+    SET foreign_key_checks = 1;
+    
+    -- Continue conforme o número de tabelas que houver
+END;
+DROP PROCEDURE IF EXISTS backup_aula9;
+-- executando!!
+CALL backup_aula9();
+
+
+-- BKP DAS FUNÇÕES -- não tem como colocar função dentro do procedure por ser procedimenos amarzenados! e nem criar automaticamente, apenas manual!!
+SHOW CREATE FUNCTION aula9.converter_salario; -- copiar e colar os comandos escritos la!!!
+
+delimiter //
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `converter_salario`(salario DECIMAL(10,2),
+    moeda VARCHAR(10)
+) RETURNS varchar(100) CHARSET utf8mb4 COLLATE utf8mb4_general_ci
+    DETERMINISTIC
+BEGIN
+    DECLARE taxa DECIMAL(10,4);
+    DECLARE simbolo VARCHAR(5);
+    DECLARE posicao_simbolo VARCHAR(5); -- 'antes' ou 'depois'
+    DECLARE salario_convertido DECIMAL(10,2);
+    DECLARE resultado VARCHAR(100);
+    
+    -- Transformando a moeda para minúsculas
+    SET moeda = LOWER(moeda);
+
+    -- Busca os dados da tabela de taxas
+    SELECT t.taxa, t.simbolo, t.posicao
+    INTO taxa, simbolo, posicao_simbolo
+    FROM taxas_moeda t
+    WHERE t.moeda = moeda;
+
+    SET salario_convertido = salario * taxa;
+
+    IF posicao_simbolo = 'antes' THEN
+        SET resultado = CONCAT(simbolo, ' ', FORMAT(salario_convertido, 2));
+    ELSE
+        SET resultado = CONCAT(FORMAT(salario_convertido, 2), ' ', simbolo); -- format ta fazendo fução de saparar 2 casas decimais 
+    END IF;
+
+    RETURN resultado;
+END //
+
+delimiter ;
+
+-- executando a função
+SELECT 
+    funcionario.nome AS nome_funcionario, 
+    departamento.nome AS nome_departamento,
+    converter_salario(funcionario.salario, 'dolar') AS salario_convertido
+FROM 
+    funcionario 
+JOIN 
+    departamento ON funcionario.departamento = departamento.numero
+WHERE 
+    funcionario.codigo = 1;
+
+-- 2º função
+SHOW CREATE FUNCTION aula9.obter_iniciais;
+
+delimiter //
+
+CREATE DEFINER=`root`@`localhost` FUNCTION `obter_iniciais`(nome_completo VARCHAR(255)) RETURNS varchar(255) CHARSET utf8mb4 COLLATE utf8mb4_general_ci
+    DETERMINISTIC
+BEGIN
+    DECLARE i INT DEFAULT 1;
+    DECLARE qtd_palavras INT;
+    DECLARE palavra VARCHAR(255);
+    DECLARE iniciais VARCHAR(255) DEFAULT '';
+    
+    SET qtd_palavras = LENGTH(nome_completo) - LENGTH(REPLACE(nome_completo, ' ', '')) + 1;
+    
+    WHILE i <= qtd_palavras DO
+        SET palavra = TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(nome_completo, ' ', i), ' ', -1));
+        SET iniciais = CONCAT(iniciais, UPPER(LEFT(palavra, 1)), ' ');
+        SET i = i + 1;
+    END WHILE;
+    
+    RETURN TRIM(iniciais);
+END //
+
+delimiter ;
+
+-- executando função!
+select * from funcionario;
+SELECT nome, obter_iniciais(nome) as Inicias_Nome FROM funcionario WHERE codigo = 2;
+
+-- apenas copiar e colar o codigo em viewer para fazer o BKP!!!
+SHOW CREATE FUNCTION aula9.nome_vogais;
+
+-- apenas copiar e colar o codigo em viewer para fazer o BKP!!!
+SHOW CREATE PROCEDURE aula9.media_salarial_departamento;
+
+SELECT * FROM FUNCIONARIO;
+SELECT * FROM DEPARTAMENTO;
+SELECT * FROM TAXAS_MOEDA;
+DESC FUNCIONARIO;
+DESC DEPARTAMENTO;
+DESC TAXAS_MOEDA;
+SHOW CREATE TABLE BKP.funcionario;
+SHOW CREATE TABLE BKP.funcionario;
+SHOW FUNCTION STATUS WHERE Db = 'aula9';
+SHOW procedure STATUS WHERE Db = 'aula9';

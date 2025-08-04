@@ -1,0 +1,254 @@
+-- criando o banco com foreing key!
+create database Aula9;
+
+-- Selecionando o banco! 	
+use Aula9;	
+
+-- criando tabelas relacionais
+-- 01 Adição de Colunas - 1 : n *
+-- 02 Fusão de tabelas - 1 : 1
+-- 03 Tabelas próprias - n : n
+
+create table departamento(
+numero int auto_increment primary key,
+nome varchar(100) not null,
+sigla varchar(50) not null
+);
+
+create table Funcionario(
+codigo int auto_increment primary key,
+nome varchar(100) not null,
+endereco varchar(100) not null,
+departamento int 
+);
+
+-- primeiro departamento e variável para ligar as tabelas!
+alter table funcionario 
+Add foreign key (departamento) references departamento (numero);
+
+desc funcionario;
+
+-- adicionando registros! 
+insert into departamento(nome, sigla) values('Polícia Rodoviária Federal', 'PRF'),
+('Departamento de Engenharia Florestal', 'DEF'), ('Departamento Pessoal', 'DP');
+
+SELECT * FROM DEPARTAMENTO;
+
+insert into funcionario(nome, endereco) values ('Mariana Silva Pereira', 'Mariana@455'),
+('Geovanna de Costas Gandefer', 'Geovanna@342'), ('Alanzoka Nextage', 'Alanzoka@567'),
+('Jergio Sacani Foguetes', 'Jergio@666'), ('Miguel Merin Pastor', 'Miguel@332');
+
+select * from funcionario;
+desc funcionario;
+
+-- adicionando coluna
+alter table funcionario 
+add column salario numeric(15,2);
+-- apagando coluna
+alter table funcionario
+drop column salario;
+
+select * from departamento;
+
+-- adicionando os departamento aos nomes
+update funcionario 
+set departamento = 1 
+where codigo = 1;
+
+update funcionario 
+set departamento = 1 
+where codigo = 2;
+
+update funcionario 
+set departamento = 2 
+where codigo = 4;
+
+-- adicionando salario para os funcionários!
+select * from funcionario;
+update funcionario 
+set salario = 7945.34
+where codigo = 5;
+
+-- criando a tabela das taxas
+CREATE TABLE taxas_moeda (
+    moeda VARCHAR(10) PRIMARY KEY,
+    taxa DECIMAL(10,4),
+    simbolo VARCHAR(5),
+    posicao VARCHAR(10)  -- 'antes' ou 'depois'
+);
+
+-- inserindo os valores
+INSERT INTO taxas_moeda (moeda, taxa, simbolo, posicao) VALUES
+('dolar', 0.176, '$', 'antes'),
+('euro', 0.163, '€', 'depois'),
+('libra', 0.145, '£', 'antes'),
+('peso', 50.00, '₱', 'antes'),
+('real', 1.00, 'R$', 'antes');
+
+-- funçao para converter o salario na moeda local;
+DELIMITER $$
+
+-- aprimorar dps!!!!!
+CREATE FUNCTION converter_salario(
+    salario DECIMAL(10,2),
+    moeda VARCHAR(10)
+)
+RETURNS VARCHAR(100)
+DETERMINISTIC
+BEGIN
+    DECLARE taxa DECIMAL(10,4);
+    DECLARE simbolo VARCHAR(5);
+    DECLARE posicao_simbolo VARCHAR(5); -- 'antes' ou 'depois'
+    DECLARE salario_convertido DECIMAL(10,2);
+    DECLARE resultado VARCHAR(100);
+    
+    -- Transformando a moeda para minúsculas
+    SET moeda = LOWER(moeda);
+
+    -- Busca os dados da tabela de taxas
+    SELECT t.taxa, t.simbolo, t.posicao
+    INTO taxa, simbolo, posicao_simbolo
+    FROM taxas_moeda t
+    WHERE t.moeda = moeda;
+
+    SET salario_convertido = salario * taxa;
+
+    IF posicao_simbolo = 'antes' THEN
+        SET resultado = CONCAT(simbolo, ' ', FORMAT(salario_convertido, 2));
+    ELSE
+        SET resultado = CONCAT(FORMAT(salario_convertido, 2), ' ', simbolo); -- format ta fazendo fução de saparar 2 casas decimais 
+    END IF;
+
+    RETURN resultado;
+END $$
+
+DELIMITER ;
+
+drop function if exists converter_salario;
+
+select * from funcionario;
+select * from departamento;
+-- pode usar apelidos como f e d (aliases)
+SELECT 
+    funcionario.nome AS nome_funcionario, 
+    departamento.nome AS nome_departamento,
+    converter_salario(funcionario.salario, 'dolar') AS salario_convertido
+FROM 
+    funcionario 
+JOIN 
+    departamento ON funcionario.departamento = departamento.numero
+WHERE 
+    funcionario.codigo = 1;
+    
+    desc departamento;
+    desc funcionario;
+    
+    
+    -- Função que retorne as inicias do nome!!!
+DELIMITER //
+
+CREATE FUNCTION obter_iniciais(
+
+nome_completo VARCHAR(255)
+)
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+    DECLARE i INT DEFAULT 1;
+    DECLARE qtd_palavras INT;
+    DECLARE palavra VARCHAR(255);
+    DECLARE iniciais VARCHAR(255) DEFAULT '';
+    
+    -- LENGTH(REPLACE(nome_completo), ' ', '')) + 1 = soma o tamanho da string sem espaços em branco  + 1
+    SET qtd_palavras = LENGTH(nome_completo) - LENGTH(REPLACE(nome_completo, ' ', '')) + 1;
+    
+    WHILE i <= qtd_palavras DO
+    -- entendido -- SUBSTRING_INDEX(string, delimitador, contagem)  o -1 pega a ultima parte! apos o delimitador
+        SET palavra = TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(nome_completo, ' ', i), ' ', -1));
+        -- LEFT(palavra, 1) = Primeira palavra a esquerda!
+        SET iniciais = CONCAT(iniciais, UPPER(LEFT(palavra, 1)), ' ');
+        SET i = i + 1;
+    END WHILE;
+    
+    RETURN TRIM(iniciais);
+END //
+
+DELIMITER ;
+
+select * from funcionario;
+SELECT nome, obter_iniciais(nome) as Inicias_Nome FROM funcionario WHERE codigo = 2;
+
+
+-- criando uma função que retorne as vogais de um nome!
+delimiter //
+
+create function Nome_Vogais(
+     nome varchar(100)
+)
+returns varchar(100)
+deterministic
+
+begin
+    declare i int default 1;
+    declare letra char(1);
+    declare tamanho int;
+    declare vogais varchar(50) default '';
+    
+    set tamanho = LENGTH(nome);
+    
+    while i <= tamanho do
+    SET letra = UPPER(SUBSTRING(nome, i, 1));
+    -- IN VERIFICA UMA LISTA DE OPÇÕES!
+    IF letra IN ('a', 'e', 'i', 'o', 'u') THEN
+            SET vogais = CONCAT(vogais, letra, ' ');
+        END IF;
+        
+        SET i = i + 1;
+    end while;
+    
+    return vogais;
+    
+end //
+
+delimiter ;
+
+drop function if exists nome_vogais;
+
+select nome, nome_vogais(nome) as vogais_Nome from funcionario where codigo = 3;
+
+select * from funcionario;
+
+
+-- criando uma função que retorne a media salarial por departamento!
+DELIMITER //
+
+CREATE PROCEDURE media_salarial_departamento(
+    IN dept_id INT,
+    OUT media DECIMAL(10,2)
+)
+BEGIN
+    SELECT AVG(salario)
+    INTO media
+    FROM funcionario
+    WHERE departamento = dept_id;
+    
+    -- Se não houver funcionários no departamento, a média será 0
+    IF media IS NULL THEN
+        SET media = 0;
+    END IF;
+END //
+
+DELIMITER ;
+
+drop procedure if exists media_salarial_departamento;
+
+-- 1. Declare a variável para armazenar o resultado da média
+SET @media_resultado = 0;
+
+-- 2. Chame a procedure, passando o ID do departamento (exemplo: 1)
+CALL media_salarial_departamento(1, @media_resultado);
+
+-- 3. Exiba o resultado da média
+SELECT @media_resultado AS Média_Departamento;
+
+select * from funcionario;

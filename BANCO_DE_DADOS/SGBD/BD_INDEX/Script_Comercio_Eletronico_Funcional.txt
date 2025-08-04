@@ -1,0 +1,39 @@
+-- SELECIONANDO!
+SELECT * FROM TIPOCLIENTE;
+SELECT * FROM CLIENTE;
+SELECT * FROM PEDIDO;
+SELECT * FROM ITENSPEDIDO;
+SELECT * FROM PRODUTO;
+
+-- aqui vai os dados do cliente e retorna o NUMPEDIDO 
+CALL SP_CriarClienteEPedido('PJ', 'Tech Solutions SA', 'suporte@techsolutions.com', NULL, '98765432000155', @NumP);
+SELECT @NumP AS NumeroPedidoGerado;
+
+/*('PF', 'Lucas Andrade', 'lucas.andrade@email.com', '11122233344', NULL),
+('PF', 'Fernanda Silva', 'fernanda.silva@email.com', '22233344455', NULL),
+('PJ', 'AlphaTech Solutions', 'contato@alphatech.com', NULL, '10293847560199'),
+('PF', 'Juliana Souza', 'juliana.souza@email.com', '33344455566', NULL),
+('PJ', 'BuildCorp Engenharia', 'comercial@buildcorp.com.br', NULL, '12345678000110'),
+('PF', 'Renato Castro', 'renato.castro@email.com', '44455566677', NULL),
+('PJ', 'SmartTrade Comércio', 'vendas@smarttrade.com', NULL, '45678912000188'),
+('PF', 'Mariana Alves', 'mariana.alves@email.com', '55566677788', NULL),
+('PF', 'Diego Martins', 'diego.martins@email.com', '66677788899', NULL),
+('PJ', 'VisionData TI Ltda', 'suporte@visiondata.com', NULL, '78945612000155');
+*/
+
+-- INSERE PRODUTOS PARA A COMPRA DE CLIENTE NOVO!
+CALL SP_InserirProduto(@NumP, 4, 3);
+
+-- INSERE PRODUTOS PARA A COMPRA DE CLIENTES CADASTRADOS!
+CALL SP_CriarPedidoPorDocumento('98765432000155', @NumPedido);
+SELECT @NumPedido AS PedidoCriado;
+CALL SP_InserirProduto(@NumPedido, 4, 3);
+
+-- SELECIONA A VIEW PEDIDOS DETALHADOS!
+SELECT * FROM vw_pedidos_detalhados;
+
+-- PARA PF OU PJ! SELECIONA O TOTAL DE PEDIDOS!
+SELECT fn_total_pedidos_cliente('98765432000155') AS TotalPedidos;
+
+-- APAGA REGISTROS DOS CLIENTES APOS EFETUAR PAGAMENTO!
+DELETE FROM pedido WHERE NUMPEDIDO = 2025;

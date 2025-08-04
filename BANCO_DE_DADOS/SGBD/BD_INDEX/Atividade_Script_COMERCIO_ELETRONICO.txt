@@ -1,0 +1,251 @@
+CREATE DATABASE COMERCIO_ELETRONICO;
+
+USE COMERCIO_ELETRONICO;
+
+SELECT * FROM TIPOCLIENTE;
+
+SELECT * FROM CLIENTE;
+DESC CLIENTE;
+
+SELECT * FROM PEDIDO;
+desc pedido;
+
+ALTER TABLE pedido
+MODIFY COLUMN TOTALITEM INT DEFAULT 0;
+
+ALTER TABLE pedido
+MODIFY COLUMN VALORPEDIDO DECIMAL(15,2) DEFAULT 0.00;
+
+SELECT * FROM ITENSPEDIDO;
+DESC ITENSPEDIDO;
+
+SELECT * FROM PRODUTO;
+DESC PRODUTO;
+
+ALTER TABLE cliente MODIFY IDC INT AUTO_INCREMENT;
+INSERT INTO cliente (IDTC, NOME, DTCAD, EMAIL, CPF, CNPJ)
+VALUES ('PF', 'Yan Duarte Marques', NOW(), 'FAP@ANHAGUERA.COM.BR', '00011122299', NULL);
+
+-- criando uma storage inserir ClientePedido!
+DELIMITER $$
+
+CREATE PROCEDURE SP_CriarClienteEPedido (
+    IN IDTC CHAR(2),
+    IN NOME VARCHAR(50),
+    IN EMAIL VARCHAR(30),
+    IN CPF VARCHAR(11),
+    IN CNPJ VARCHAR(20),
+    OUT NUMPEDIDO INT
+)
+BEGIN
+    DECLARE NEW_IDC INT;
+
+    -- Inserir cliente
+    INSERT INTO cliente (IDTC, NOME, DTCAD, EMAIL, CPF, CNPJ)
+    VALUES (IDTC, NOME, NOW(), EMAIL, CPF, CNPJ);
+
+    -- Obter o IDC recém-criado
+    SET NEW_IDC = LAST_INSERT_ID();
+
+    -- Criar pedido para o cliente novo
+    INSERT INTO pedido (IDC, DTPEDIDO, TOTALITEM, VALORPEDIDO)
+    VALUES (NEW_IDC, NOW(), 0, 0.00);
+
+    -- Retornar o NUMPEDIDO gerado
+    SET NUMPEDIDO = LAST_INSERT_ID();
+END$$
+
+DELIMITER ;
+
+-- aqui vai os dados do cliente e retorna o NUMPEDIDO 
+CALL SP_CriarClienteEPedido('PJ', 'Tech Solutions SA', 'suporte@techsolutions.com', NULL, '98765432000155', @NumP);
+SELECT @NumP AS NumeroPedidoGerado;
+
+-- Digamos que você quer saber qual é o pedido do cliente com CPF '12345678901'
+SELECT p.NUMPEDIDO
+FROM pedido p
+JOIN cliente c ON c.IDC = p.IDC
+WHERE c.CPF = '12345678901';
+
+-- ALGUNS DADOS!
+/*('PJ', 'Empresa XYZ Ltda', 'contato@xyz.com', NULL, '12345678000199'),
+('PF', 'Carlos Lima', 'carlos.lima@email.com', '23456789012', NULL),
+('PJ', 'Tech Solutions SA', 'suporte@techsolutions.com', NULL, '98765432000155'),
+('PF', 'Daniela Costa', 'daniela.costa@email.com', '34567890123', NULL);
+*/
+
+-- CRIA O PEDIDO DE CLIENTE JA EXISTENTE
+DELIMITER $$
+
+CREATE PROCEDURE SP_CriarPedidoPorDocumento (
+    IN DOC VARCHAR(20),
+    OUT NUMPEDIDO_OUT INT
+)
+BEGIN
+    DECLARE V_IDC INT;
+
+    -- Busca o cliente por CPF ou CNPJ
+    SELECT IDC INTO V_IDC
+    FROM cliente
+    WHERE CPF = DOC OR CNPJ = DOC
+    LIMIT 1;
+
+    -- Se não encontrou, dispara erro
+    IF V_IDC IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cliente não encontrado com esse CPF ou CNPJ.';
+    END IF;
+
+    -- Cria o pedido
+    INSERT INTO pedido (IDC, DTPEDIDO, TOTALITEM, VALORPEDIDO)
+    VALUES (V_IDC, CURRENT_DATE(), 0, 0.00);
+
+    SET NUMPEDIDO_OUT = LAST_INSERT_ID();
+END $$
+
+DELIMITER ;
+
+CALL SP_CriarPedidoPorDocumento('99999999999', @NumPedido);
+SELECT @NumPedido AS PedidoCriado;
+
+-- inserindo produtos para a compra!
+DELIMITER $$
+
+CREATE PROCEDURE SP_InserirProduto (
+    IN NUMPEDIDOO INT,
+    IN IDPRO INT,
+    IN QUANTIDADE INT
+)
+BEGIN
+    DECLARE PRECO DECIMAL(15,2);
+
+    -- Buscar o valor do produto
+    SELECT VALOR INTO PRECO
+    FROM produto
+    WHERE IDPR = IDPRO;
+
+    -- Inserir na tabela de itens do pedido
+    INSERT INTO itenspedido (NUMPEDIDO, IDPR, QUANTIDADE, VALOR)
+    VALUES (NUMPEDIDOO, IDPRO, QUANTIDADE, PRECO * QUANTIDADE);
+END$$
+
+DELIMITER ;
+
+-- chama o procedure inserir produtos
+CALL SP_InserirProduto(@NumP, 7, 2);
+
+-- atualiza a tabela pedido!
+DELIMITER $$
+
+CREATE TRIGGER trg_pos_inserir_item
+AFTER INSERT ON itenspedido
+FOR EACH ROW
+BEGIN
+    UPDATE pedido
+    SET TOTALITEM = TOTALITEM + NEW.QUANTIDADE,
+        VALORPEDIDO = VALORPEDIDO + NEW.VALOR
+    WHERE NUMPEDIDO = NEW.NUMPEDIDO;
+END$$
+
+DELIMITER ;
+
+-- criando uma view!
+CREATE VIEW vw_pedidos_detalhados AS
+SELECT 
+    p.NUMPEDIDO,
+    c.NOME AS CLIENTE,
+    COALESCE(c.CPF, c.CNPJ) AS DOCUMENTO,
+    p.DTPEDIDO,
+    p.TOTALITEM,
+    p.VALORPEDIDO
+FROM pedido p
+JOIN cliente c ON p.IDC = c.IDC;
+
+SELECT * FROM vw_pedidos_detalhados;
+
+DELIMITER $$
+
+CREATE FUNCTION fn_total_pedidos_cliente(
+doc VARCHAR(20))
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+
+    SELECT COUNT(p.NUMPEDIDO)
+    INTO total
+    FROM pedido p
+    JOIN cliente c ON p.IDC = c.IDC
+    WHERE c.CPF = doc OR c.CNPJ = doc;
+
+    RETURN total;
+END$$
+
+DELIMITER ;
+-- para PF ou PJ!
+SELECT fn_total_pedidos_cliente('34567890123') AS TotalPedidos;
+
+-- criando index
+CREATE INDEX idx_cliente_cpf ON cliente(CPF);
+CREATE INDEX idx_cliente_cnpj ON cliente(CNPJ);
+CREATE INDEX idx_cliente_email ON cliente(EMAIL);
+
+SHOW INDEX FROM cliente;
+SHOW INDEX FROM pedido;
+SHOW INDEX FROM itenspedido;
+
+DROP INDEX idx_itenspedido_idpr ON itenspedido;
+
+-- DESCOBRIR AS FK DE ITENS PEDIDOS
+SELECT CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME
+FROM information_schema.KEY_COLUMN_USAGE
+WHERE TABLE_NAME = 'itenspedido'
+  AND TABLE_SCHEMA = 'COMERCIO_ELETRONICO';
+  
+  -- APAGAR HISTORICO PEDIDOS E ITENSPEDIDOS!
+  ALTER TABLE itenspedido
+DROP FOREIGN KEY itenspedido_ibfk_1;
+
+ALTER TABLE itenspedido
+ADD CONSTRAINT fk_itenspedido_pedido
+FOREIGN KEY (NUMPEDIDO) REFERENCES pedido(NUMPEDIDO)
+ON DELETE CASCADE;
+
+DELETE FROM pedido WHERE NUMPEDIDO = 2020;
+
+-- ESVAZIANDO A TABELA
+SET FOREIGN_KEY_CHECKS = 0;
+
+TRUNCATE TABLE itenspedido;
+TRUNCATE TABLE pedido;
+TRUNCATE TABLE cliente;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- DEFININDO CONTADOR
+ALTER TABLE CLIENTE AUTO_INCREMENT = 1;
+ALTER TABLE itenspedido AUTO_INCREMENT = 1000;
+ALTER TABLE pedido AUTO_INCREMENT = 2025;
+
+-- INSERINDO MAIS PRODUTOS!
+INSERT INTO produto (DESCPRODUTO, VALOR) VALUES
+('Notebook Dell Inspiron', 3500.00),
+('Smartphone Samsung Galaxy', 2500.00),
+('Teclado Mecânico RGB', 450.00),
+('Mouse Gamer Logitech', 300.00),
+('Monitor LG 24 polegadas', 1200.00),
+('Impressora HP LaserJet', 900.00),
+('Fone de Ouvido Sony', 350.00),
+('SSD Kingston 480GB', 550.00),
+('Placa de Vídeo NVIDIA GTX 1660', 2200.00),
+('Memória RAM 16GB DDR4', 700.00),
+('Cadeira Gamer DXRacer', 1300.00),
+('Webcam Logitech HD', 400.00),
+('Processador Intel i7', 1800.00),
+('Fonte Corsair 650W', 600.00),
+('Gabinete Cooler Master', 350.00),
+('Tablet Samsung Galaxy Tab', 1500.00),
+('Roteador TP-Link AC1200', 250.00),
+('HD Externo Seagate 2TB', 450.00),
+('Caixa de Som JBL', 500.00),
+('Adaptador USB-C', 120.00);

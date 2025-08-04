@@ -1,0 +1,13 @@
+-- Prática 4
+-- 1. bloqueio de linha
+START TRANSACTION;
+SELECT * FROM CLIENTE WHERE CODIGO = 1 FOR UPDATE;
+COMMIT;
+
+-- 2. bloqueio de leitura em tabela específica
+LOCK TABLES CLIENTE read;
+UNLOCK TABLES; 
+
+-- 3. bloqueio te todas as tabelas de leitura
+FLUSH TABLES WITH READ LOCK;
+UNLOCK TABLES; 

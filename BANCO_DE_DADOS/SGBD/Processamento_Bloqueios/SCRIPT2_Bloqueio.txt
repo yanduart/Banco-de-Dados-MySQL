@@ -1,0 +1,11 @@
+-- prática 3
+use yan_duarte;
+select * FROM CLIENTE;
+select * FROM pedido;
+
+UPDATE CLIENTE SET NOME = 'Yan' WHERE CODIGO = 1;
+ 
+INSERT INTO CLIENTE VALUES(999, 'Meu Teste', 'aula@aula', 
+NOW());
+
+DELETE FROM CLIENTE;
