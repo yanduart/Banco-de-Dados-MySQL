@@ -1,0 +1,106 @@
+MYSQL CONCEITOS: TIPOS DE COMANDOS.
+
+create database Hashtag; = cria um banco de dados.
+ 
+use Hashtag; = serve para escolher qual banco de dados a ser usado.
+        
+create table Hashtag (colunas); = cria uma tabela.
+colunas com suas categorias,
+varchar = informações que podem conter algum número ou caractere especial.
+text = que não precisa estipular um limite de caracteres.
+year = ano
+int = inteiro
+enum = tipos enumerados, conjunto estático e predefinido de valores que seguem uma ordem específica.
+auto_increment = aumentando os valores automaticamente para que, assim, esse número indicasse quantos livros a biblioteca tinha ao todo.
+primary key = que é uma coluna que possui um valor único em cada linha, o que as identifica.
+not null = nao nulos.
+unique = algo unico.
+datetime = datas.
+
+
+
+insert into Hashtag (dados); = inserir dados numa tabela.
+values ('valores') = valores que serão inseridos nas colunas.
+null = quando nao tiver valores
+
+select* from Hashtag = mostrar a tabela na tela
+
+describe Hashtag = mostra apenas a estrutura da tabela.
+
+delete from Hashtag where id = ### = deletando linha da tabela.
+id = identidficador.
+
+update Hashtag set valores = '###' where id = ### = atualizar ou alterar valores na tabela.
+set = definir. 
+
+select* from Hashtag where valores = '###' and valores>0; = mostrar dados da tabela.
+and = e 
+
+select valores, valores, valores from Hashtag where valores= '###' and valores>0 = so seleciona aquilo que se pede.
+
+select count(valores) from Hashtag, =,> ou <  = contar linhas, exemplo: quantos produtos tem minha empresa mesmo?
+
+select* from Hashtag order by valores desc, asc, = ordenar as colunas da tabela.
+asc = crescente
+desc = decrescente 
+ 
+alter table Hashtag add ou drop column valores, after ou first  = adiciona novas coluna com suas categorias, remove e ecolhe o local. 
+add = adicionar 
+drop = apagar, remover
+after = depois
+first = antes
+column = colunas
+
+alter table Hashtag modify column valor = muda a categoria da coluna, exemplo: varchar, text, datatime...
+alter table Hashtag change column valoratual valornovo = muda o nome da coluna.
+
+alter table Hashtagatual rename to Hashtagnova = renomeia a tabela 
+
+
+drop table Hashtag = apaga a tabela.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
